@@ -1,64 +1,55 @@
-
-
-# Reanalysis of aggregated Master's thesis results.
-# This is not the original survey analysis.
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-N = 400
+# Reanalysis of aggregated Master's thesis data
+# Individual survey responses are not available.
 
-# Counts from the Master's thesis tables
-counts = [
-    ("High or very high population density", 188 + 136, "Table 4.2"),
-    ("Daily household waste generation", 276, "Table 4.3"),
-    ("Population growth linked to more waste", 324, "Table 4.4"),
-    ("Waste collection rated ineffective", 180 + 128, "Table 4.5"),
-    ("Waste infrastructure rated inadequate", 192 + 88, "Table 4.6"),
-    ("Collection occasional or never", 160 + 36, "Table 4.7"),
-]
+base = Path(__file__).resolve().parent
 
-rows = []
-for name, count, source in counts:
-    assert 0 <= count <= N
-    rows.append((name, round(count / N * 100, 1), source))
+# Load research data
+df = pd.read_csv(base / "survey_summary.csv")
 
-# Percentages reported in thesis figures
-rows.extend([
-    ("Unaware of waste management policies", 76.0, "Figure 4.2"),
-    ("Willing to join waste programs", 77.0, "Figure 4.3"),
-])
+# Check data consistency
+assert (df["total"] > 0).all()
+assert (df["count"] >= 0).all()
+assert (df["count"] <= df["total"]).all()
 
-results = pd.DataFrame(
-    rows, columns=["indicator", "percent", "source"]
-)
+# Calculate percentages
+df["percentage"] = (
+    df["count"] / df["total"] * 100
+).round(1)
 
-print(results.to_string(index=False))
+# Display analytical results
+print(df.to_string(index=False))
 
-output = Path("results")
+# Create output folder
+output = base / "results"
 output.mkdir(exist_ok=True)
-results.to_csv(output / "key_metrics.csv", index=False)
 
+df.to_csv(output / "key_metrics.csv", index=False)
+
+# Visualize findings
 fig, ax = plt.subplots(figsize=(11, 6))
 
 ax.barh(
-    results["indicator"],
-    results["percent"],
+    df["indicator"],
+    df["percentage"],
     color="steelblue"
 )
 
 ax.invert_yaxis()
 ax.set_xlim(0, 110)
-ax.set_xlabel("Share of respondents (%)")
-ax.set_title("Kaduna North: Survey Indicators (N=400)")
+ax.set_xlabel("Percentage of respondents (%)")
+ax.set_title("Waste Management Survey: Kaduna North")
 
-for i, value in enumerate(results["percent"]):
-    ax.text(value + 1, i, f"{value:.0f}%", va="center")
+for i, value in enumerate(df["percentage"]):
+    ax.text(value + 1, i, f"{value:.1f}%", va="center")
 
-fig.subplots_adjust(
-    left=0.41, right=0.94, top=0.90, bottom=0.12
+fig.subplots_adjust(left=0.43, right=0.94)
+fig.savefig(
+    output / "key_indicators.png",
+    dpi=160
 )
 
-fig.savefig(output / "key_indicators.png", dpi=160)
-
-print("Analysis complete. Results saved.")
+print("Analysis completed successfully.")
